@@ -14,5 +14,6 @@ router.post("/enroll", auth, courseController.enroll);
 
 // Get my enrolled courses
 router.get("/my-courses/list", auth, courseController.getMyCourses);
+router.post('/create', auth, courseController.createCourse);
 
 module.exports = router;

@@ -97,3 +97,17 @@ exports.getMyCourses = async (req, res) => {
   }
 };
 
+// Create course
+exports.createCourse = async (req, res) => {
+  const { title, description, level, language } = req.body;
+  const userid = req.user.userid;
+  try {
+    const result = await pool.query(
+      'INSERT INTO courses (title, description, level, language, createdby) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [title, description, level, language, userid]
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};

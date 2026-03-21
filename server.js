@@ -1,22 +1,44 @@
-const app = require("./src/app");
-const initDB = require("./src/config/initDB");
+// // server.js - COMPLETE FIXED VERSION
+// const app = require('./src/app.js');  // ← YE MISSING THA!
+// const initDB = require('./src/config/initDB.js');
 
-const PORT = 8000;
+// const PORT = process.env.PORT || 8000;
 
-const startServer = async () => {
+// async function startServer() {
+//   try {
+//     console.log("🔄 Starting server...");
+    
+//     // Safe DB init
+//     await initDB();
+//     console.log("✅ Database ready!");
+    
+//     // Start server
+//     app.listen(PORT, () => {
+//       console.log(`🚀 Server running on port ${PORT}`);
+//       console.log(`📱 Test: http://localhost:${PORT}/api/`);
+//     });
+    
+//   } catch (error) {
+//     console.error("❌ Failed to start server:", error.message);
+//     process.exit(1);
+//   }
+// }
+
+// startServer();
+const app = require('./src/app.js');  // ← Path check kar
+const initDB = require('./src/config/initDB.js');
+
+const PORT = process.env.PORT || 8000;  // ← 8000 fix
+
+async function startServer() {
   try {
-    // Initialize tables
     await initDB();
-
-    // Start server only after DB ready
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
     });
-
   } catch (error) {
-    console.error("❌ Failed to start server:", error);
-    process.exit(1);
+    console.error("Failed to start:", error);
   }
-};
+}
 
 startServer();

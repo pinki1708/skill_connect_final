@@ -1,4 +1,5 @@
-const pool = require("./db");
+// const pool = require("./db");
+const pool = require("../config/db");
 
 const initDB = async () => {
   const client = await pool.connect();
@@ -172,6 +173,26 @@ const initDB = async () => {
         CONSTRAINT uq_course_user UNIQUE(course_id, user_id)
       );
     `);
+
+    // ================= COURSE VIDEOS ================= (Fixed column names)
+   
+      // course_videos table ke liye - SAFE VERSION
+  await client.query(`
+    CREATE TABLE IF NOT EXISTS course_videos (
+    video_id SERIAL PRIMARY KEY,
+    course_id INT REFERENCES courses(course_id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    video_url TEXT NOT NULL,
+    thumbnail_url TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    user_id INT REFERENCES users(user_id)
+  );
+`);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_course_videos_course_time ON course_videos(course_id, created_at DESC);
+    `);
+
     // ================= PROJECTS =================
     await client.query(`
       CREATE TABLE IF NOT EXISTS projects (
@@ -202,29 +223,91 @@ const initDB = async () => {
     `);
 
     // ================= PROJECT INTERACTIONS =================
-// This tracks Likes (Join Requests) and Passes (Swiped Left)
-await client.query(`  
-  CREATE TABLE IF NOT EXISTS project_interactions (
-    interaction_id SERIAL PRIMARY KEY,
-    project_id INT NOT NULL,
-    sender_id INT NOT NULL,
-    type VARCHAR(20) CHECK (type IN ('like', 'pass')), 
-    message TEXT,  
-    status VARCHAR(20) DEFAULT 'pending', 
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_int_project FOREIGN KEY(project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
-    CONSTRAINT fk_int_sender FOREIGN KEY(sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    UNIQUE(project_id, sender_id)
-  );
-`);
+    await client.query(`  
+      CREATE TABLE IF NOT EXISTS project_interactions (
+        interaction_id SERIAL PRIMARY KEY,
+        project_id INT NOT NULL,
+        sender_id INT NOT NULL,
+        type VARCHAR(20) CHECK (type IN ('like', 'pass')), 
+        message TEXT,  
+        status VARCHAR(20) DEFAULT 'pending', 
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_int_project FOREIGN KEY(project_id) REFERENCES projects(project_id) ON DELETE CASCADE,
+        CONSTRAINT fk_int_sender FOREIGN KEY(sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        UNIQUE(project_id, sender_id)
+      );
+    `);
 
+    // ========== URL PATHS FIX - IDEMPOTENT (safe to run multiple times) ==========
+    console.log('🔧 Fixing URL paths...');
+    
+    await client.query(`
+      UPDATE user_profile 
+      SET avatar_url = CASE 
+        WHEN avatar_url IS NOT NULL AND avatar_url != '' 
+             AND avatar_url NOT LIKE '/uploads/%' 
+             AND (avatar_url LIKE '%.jpg' OR avatar_url LIKE '%.png' OR avatar_url LIKE '%.jpeg' OR avatar_url LIKE '%uploads/%')
+        THEN CONCAT('/uploads/', avatar_url)
+        ELSE avatar_url 
+      END
+      WHERE avatar_url IS NOT NULL AND avatar_url != '';
+    `);
+
+    await client.query(`
+      UPDATE media_posts 
+      SET media_url = CASE 
+        WHEN media_url IS NOT NULL AND media_url != '' AND media_url NOT LIKE '/uploads/%'
+        THEN CONCAT('/uploads/', media_url)
+        ELSE media_url 
+      END
+      WHERE media_url IS NOT NULL AND media_url != '';
+    `);
+
+    await client.query(`
+      UPDATE video_metadata 
+      SET thumbnail_url = CASE 
+        WHEN thumbnail_url IS NOT NULL AND thumbnail_url != '' AND thumbnail_url NOT LIKE '/uploads/%'
+        THEN CONCAT('/uploads/', thumbnail_url)
+        ELSE thumbnail_url 
+      END
+      WHERE thumbnail_url IS NOT NULL AND thumbnail_url != '';
+    `);
+
+    await client.query(`
+      UPDATE course_lessons 
+      SET video_url = CASE 
+        WHEN video_url IS NOT NULL AND video_url != '' AND video_url NOT LIKE '/uploads/%'
+        THEN CONCAT('/uploads/', video_url)
+        ELSE video_url 
+      END
+      WHERE video_url IS NOT NULL AND video_url != '';
+    `);
+
+    await client.query(`
+      UPDATE course_videos 
+      SET video_url = CASE 
+        WHEN video_url IS NOT NULL AND video_url != '' AND video_url NOT LIKE '/uploads/%'
+        THEN CONCAT('/uploads/', video_url)
+        ELSE video_url 
+      END,
+      thumbnail_url = CASE 
+        WHEN thumbnail_url IS NOT NULL AND thumbnail_url != '' AND thumbnail_url NOT LIKE '/uploads/%'
+        THEN CONCAT('/uploads/', thumbnail_url)
+        ELSE thumbnail_url 
+      END
+      WHERE (video_url IS NOT NULL AND video_url != '') OR (thumbnail_url IS NOT NULL AND thumbnail_url != '');
+    `);
+
+    console.log('✅ URL paths fixed successfully!');
+
+    // ========== COMMIT ALL CHANGES ==========
     await client.query("COMMIT");
     console.log("✅ All tables created successfully!");
 
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("❌ Error initializing DB:", err.message);
-    throw err; 
+    throw err;
   } finally {
     client.release();
   }
@@ -233,7 +316,7 @@ await client.query(`
 if (require.main === module) {
   initDB()
     .then(() => {
-      console.log("Database Setup Finished.");
+      console.log("🎉 Database Setup Finished.");
       process.exit(0);
     })
     .catch((err) => {
