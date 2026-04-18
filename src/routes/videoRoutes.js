@@ -3,7 +3,7 @@
 
 // const upload = require("../middleware/uploadMiddleware");
 // const videocontroller = require('../controllers/videocontroller');
-// // Existing POST is good: router.post('/', upload.single('video'), videoController.uploadVideo);
+// // Existing POST is good: router.post('/', upload.single('video'), videocontroller.uploadVideo);
 
 
 // router.post(
