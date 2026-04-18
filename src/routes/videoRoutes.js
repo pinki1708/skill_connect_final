@@ -20,7 +20,7 @@ const express = require("express");
 const router = express.Router();
 
 const upload = require("../middleware/uploadMiddleware");
-const videoController = require('../controllers/videocontroller');  // ✅ Fixed
+const videocontroller = require('../controllers/videocontroller');  // ✅ Fixed
 
 // ROOT POST - NOT /upload
 router.post('/', upload.single("video"), videocontroller.uploadVideo);  // ← ROOT '/'
