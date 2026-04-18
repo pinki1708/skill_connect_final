@@ -20,12 +20,12 @@ const express = require("express");
 const router = express.Router();
 
 const upload = require("../middleware/uploadMiddleware");
-const videoController = require('../controllers/videoController');  // ✅ Fixed
+const videoController = require('../controllers/videocontroller');  // ✅ Fixed
 
 // ROOT POST - NOT /upload
-router.post('/', upload.single("video"), videoController.uploadVideo);  // ← ROOT '/'
+router.post('/', upload.single("video"), videocontroller.uploadVideo);  // ← ROOT '/'
 
-router.get('/all', videoController.getAllVideos);
-router.get('/course/:course_id', videoController.getVideosByCourse);  // course_id fix
+router.get('/all', videocontroller.getAllVideos);
+router.get('/course/:course_id', videocontroller.getVideosByCourse);  // course_id fix
 
 module.exports = router;
